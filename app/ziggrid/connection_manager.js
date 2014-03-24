@@ -4,19 +4,17 @@ import demux from 'appkit/ziggrid/demux';
 import flags from 'appkit/flags';
 
 var ConnectionManager = Ember.Object.extend({
-
   url: null,
 
   // Reference to the global app namespace where we'll be installing
   // dynamically generated DS.Model classes
   namespace: null,
 
-  generator: null,
-
   establishConnection: function() {
 
     var self = this;
 
+    this.generators = {};
     this.observers = {};
     this.initNeeded = 1;
     this.initCompleted = 0;
@@ -128,7 +126,7 @@ var ConnectionManager = Ember.Object.extend({
   registerServer: function(server, addr) {
     var self = this;
     if (server === 'generator') {
-      this.set('generator', Generator.create(addr));
+      this.generators[addr] = Generator.create(addr);
     } else if (server === 'ziggrid') {
       //return;
       if (!this.observers[addr]) {

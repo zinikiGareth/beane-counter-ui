@@ -6,7 +6,7 @@ var Player = Ember.Component.extend({
   _nubProgress: 0,
   nubProgressIsSynced: true,
 
-  generator: Ember.computed.alias('connectionManager.generator'),
+  generators: Ember.computed.alias('connectionManager.generators'),
 
   progressTextStyle: function() {
     var nubProgress = this.get('nubProgress') || 0;
@@ -44,14 +44,20 @@ var Player = Ember.Component.extend({
   actions: {
     play: function() {
       if (this.get('isPlaying')) { return; }
-      this.get('generator').start();
+      var gens = this.get('generators');
+      for (var g in gens) {
+        gens[g].start();
+      }
       this.set('isPlaying', true);
       this.sendAction('didBeginPlaying');
     },
 
     pause: function() {
       if (!this.get('isPlaying')) { return; }
-      this.get('generator').stop();
+      var gens = this.get('generators');
+      for (var g in gens) {
+        gens[g].stop();
+      }
       this.set('isPlaying', false);
       this.sendAction('didEndPlaying');
     }
