@@ -14,7 +14,13 @@
           {{#if hrs}}
             {{hrs}}
           {{else}}
-            {{round f1}}
+            {{#if average}}
+              {{round average}}
+            {{else}}
+              {{#if production}}
+                {{round production}}
+              {{/if}}
+            {{/if}}
           {{/if}}
         </td>
       </tr>

@@ -33,7 +33,9 @@ Generator.prototype = {
   hasSetDelay: false,
 
   send: function(msg) {
-    console.log('Sending generator message', msg);
+    if (flags.LOG_WEBSOCKETS) {
+      console.log('Sending generator message', msg);
+    }
     this.conn.push(msg);
   },
 

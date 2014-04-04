@@ -1,4 +1,4 @@
-var url = 'http://couchconf.ziggrid.org:8088/ziggrid/';
+var url = '/ziggrid/';
 
 import ConnectionManager from 'appkit/ziggrid/connection_manager';
 

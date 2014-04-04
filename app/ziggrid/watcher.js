@@ -8,10 +8,11 @@ function Loader(type, entryType, id) {
   this.update = type === entryType ? updateIndividualThing : updateTabularData;
 
   function updateTabularData(body) {
+    var table = body['table'];
     var rows = [];
 
-    for (var i = 0; i < body.length; i++) {
-      var item = body[i];
+    for (var i = 0; i < table.length; i++) {
+      var item = table[i];
 
       var attrs = {};
       attrs[Ember.keys(entryType.model)[0]] = item[0];
@@ -27,7 +28,7 @@ function Loader(type, entryType, id) {
 
   function updateIndividualThing(body) {
     body.handle_id = id;
-    store.load(type, body.id || id, body);
+    store.load(type, id, body);
   }
 }
 

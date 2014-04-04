@@ -2,8 +2,12 @@ import demux from 'appkit/ziggrid/demux';
 
 var PlayerProfile = Ember.Component.extend({
   player: null,
+  seasonHolder: null,
   init: function () {
+    var self = this;
     this.connectionManager = this.container.lookup('connection_manager:main'); // inject
+    this.seasonHolder = this.container.lookup('controller:application');
+    this.seasonHolder.addObserver('season', function() { self.playerWillChange(); self.playerChanged(); });
     this._super();
   },
   players: function() {
@@ -43,7 +47,6 @@ var PlayerProfile = Ember.Component.extend({
 
     this.set('watchHandle', handle);
     this.set('profile', null);
-
     var player = this;
     demux[handle] = {
       update: function(data) {
@@ -54,7 +57,8 @@ var PlayerProfile = Ember.Component.extend({
     var query = {
       watch: 'Profile',
       unique: handle,
-      player: this.get('player.code')
+      player: this.get('player.code'),
+      season: this.seasonHolder.get('season')
     };
 
     // Send the JSON message to the server to begin observing.

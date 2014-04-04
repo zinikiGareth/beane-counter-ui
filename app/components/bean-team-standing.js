@@ -29,7 +29,7 @@ var TeamStanding = Ember.Component.extend({
       season: '' + season
     };
 
-    console.log('watching', subscription);
+//    console.log('watching', subscription);
 
     var model = watcher.watch('WinLoss', 'WinLoss', subscription);
 

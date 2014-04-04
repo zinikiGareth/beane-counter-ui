@@ -59,18 +59,7 @@ var ConnectionManager = Ember.Object.extend({
 
       var body = JSON.parse(msg.responseBody);
 
-      if (body['deliveryFor']) {
-        // TODO: shouldn't this be in observer.js?
-        var h = demux[body['deliveryFor']];
-        if (h && h.update) {
-          if (body.payload.table) {
-            // Assume tabular data
-            h.update(body.payload.table);
-          } else {
-            h.update(body.payload);
-          }
-        }
-      } else if (body['error']) {
+      if (body['error']) {
         console.error(body['error']);
       } else if (body['modelName']) {
         this.registerModel(body.modelName, body.model);
@@ -132,8 +121,8 @@ var ConnectionManager = Ember.Object.extend({
       if (!this.observers[addr]) {
         this.initNeeded++;
 
-        this.observers[addr] = Observer.create(addr, function() {
-          self.observers[addr] = self.conn;
+        this.observers[addr] = Observer.create(addr, function(newConn) {
+          self.observers[addr] = newConn;
           self.initDone();
         });
       }

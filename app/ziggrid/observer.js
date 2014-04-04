@@ -29,7 +29,10 @@ function Observer(url, callback) {
         if (body['deliveryFor']) {
           var h = demux[body['deliveryFor']];
           if (h && h.update)
-            h.update(body['table']);
+//            h.update(body['table']);
+            h.update(body['payload']);
+        } else if (body['error']) {
+          console.error("Server Error: ", body['error']);
         } else {
           console.error('unknown message type');
         }

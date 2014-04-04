@@ -12,15 +12,15 @@ var QuadrantPlayer = Ember.Object.extend({
   },
 
   code: Ember.computed.alias('data.code'),
+  profileData: null,
+  profile: null,
 
   realized: false,
   hotness: 0,
   goodness: 0,
-  watchHandle: null,
   imageUrl: function(){
     return '/players/' + this.get('code') + '.png';
   }.property('data.name').readOnly(),
-  watching: Ember.computed.bool('watchHandle'),
 
   // the actual player data resides on the Player mode,
   // this merely decorates. It is possible for us to have
@@ -39,50 +39,14 @@ var QuadrantPlayer = Ember.Object.extend({
     return !!(seasons && seasons[season]);
   },
 
-  humanizedName: Ember.computed.oneWay('data.PlayerName'),
+  humanizedName: Ember.computed.oneWay('profileData.fullname'),
 
   watchProfile: function() {
-    // TODO: inject ziggrid:connection-manager
-    var connectionManager = getConnectionManager();
-
-    var handle = ++demux.lastId;
-
-    this.set('watchHandle', handle);
-    this.set('profile', null);
-
-    var player = this;
-
-    demux[handle] = {
-      update: function(data) {
-        player.set('profile', data);
-      }
-    };
-
-    var query = {
-      watch: 'Profile',
-      unique: handle,
-      player: this.get('name')
-    };
-
-    // Send the JSON message to the server to begin observing.
-    var stringified = JSON.stringify(query);
-    connectionManager.send(stringified);
+    this.set('profile', this.get('profileData'));
   },
 
   unwatchProfile: function() {
-    // TODO: inject ziggrid:connection-manager
-    var connectionManager = getConnectionManager();
-    var watchHandle = this.get('watchHandle');
-
-    if (!watchHandle) {
-      throw new Error('No handle to unwatch');
-    }
-
-    connectionManager.send(JSON.stringify({
-      unwatch: watchHandle
-    }));
-
-    this.set('watchHandle', null); // clear handle
+    this.set('profile', null);
   }
 });
 
@@ -101,19 +65,8 @@ QuadrantPlayer.reopenClass({
     return player;
   },
   watchPlayers: function(playerNames, season, dayOfYear) {
-
     playerNames.forEach(function(playerName, i) {
-      watchAttribute('Snapshot_playerSeasonToDate',
-                     playerName,
-                     season,
-                     dayOfYear);
-
-      watchAttribute('Snapshot_clutchnessSeasonToDate',
-                     playerName,
-                     season,
-                     dayOfYear);
-
-
+      watchPlayer(playerName, season);
       QuadrantPlayer.findOrCreateByName(playerName);
     });
 
@@ -126,63 +79,41 @@ function updateQuadrantPlayer(data) {
     console.log('updateQuadrantPlayer', data);
   }
 
-  var attrs = {
-    realized: true
-  };
+  if (!data.player) return;
 
   var player = QuadrantPlayer.allByCode[data.player];
+  if (!player)
+    player = QuadrantPlayer.create({ name: data.player });
 
-  if (data.average) {
-    attrs.goodness = normalizedQuadrantValue(player, 'hotness', data.average);
-  }
-
-  if (data.correlation) {
-    attrs.hotness = normalizedQuadrantValue(player, 'goodness', data.correlation);
-  }
-
-  if (player) {
-    player.setProperties(attrs);
-  } else {
-    attrs.name = data.player;
-    QuadrantPlayer.create(attrs);
-  }
+  player.set('realized', true);
+  player.set('profileData', data);
+  player.set('goodness', normalizedQuadrantValue(data['clutchness']));
+  player.set('hotness', normalizedQuadrantValue(data['hotness']));
 }
 
-function normalizedQuadrantValue(player, key, value) {
-  if (isValidQuadrantValue(value)) {
-    return value;
-  } else {
-    return (player && Ember.get(player, key)) || Math.random();
-  }
+function normalizedQuadrantValue(value) {
+  if (typeof value === undefined) return 0.5;
+  if (value <= 0) return 0.0;
+  if (value > 1) return 1.0;
+  return value;
 }
 
-function isValidQuadrantValue(value) {
-  return value && value >= 0 && value <= 1;
-}
-
-function watchAttribute(type, playerName, season, dayOfYear) {
-
+function watchPlayer(playerName, season) {
   var handle = ++demux.lastId;
   demux[handle] = {
     update: updateQuadrantPlayer
   };
 
   var hash = {
-    watch: type,
+    watch: 'Profile',
     unique: handle,
-    player: playerName//,
-    //season: season
+    player: playerName,
+    season: season
   };
-
-  if (dayOfYear) {
-    hash.dayOfYear = dayOfYear;
-  }
 
   // Send the JSON message to the server to begin observing.
   var stringified = JSON.stringify(hash);
   getConnectionManager().send(stringified);
-
-  // fireStubbedData(handle, playerName, 500 + i*500);
 }
 
 // TODO: inject
