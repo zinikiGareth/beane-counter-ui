@@ -8,7 +8,8 @@ var initializer = {
   initialize: function(container, application) {
     var connectionManager = ConnectionManager.create({
       url: url,
-      namespace: application
+      namespace: application,
+      container: container
     });
 
     application.register('connection_manager:main', connectionManager, {

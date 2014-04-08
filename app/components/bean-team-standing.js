@@ -31,11 +31,10 @@ var TeamStanding = Ember.Component.extend({
 
 //    console.log('watching', subscription);
 
-    var model = watcher.watch('WinLoss', 'WinLoss', subscription);
+    var track = watcher.watch('WinLoss', 'WinLoss', subscription);
+    this.set('handle', track.handle);
 
-    this.set('handle', demux.lastId);
-
-    return model;
+    return track.model;
   }.property('team.code', 'season'),
   wins: Ember.computed.alias('winLoss.wins'),
   losses: Ember.computed.alias('winLoss.losses')

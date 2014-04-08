@@ -1,6 +1,7 @@
 import Generator from 'appkit/ziggrid/generator';
 import Observer from 'appkit/ziggrid/observer';
 import demux from 'appkit/ziggrid/demux';
+import watcher from 'appkit/ziggrid/watcher';
 import flags from 'appkit/flags';
 
 var ConnectionManager = Ember.Object.extend({
@@ -128,8 +129,10 @@ var ConnectionManager = Ember.Object.extend({
       if (!this.observers[addr]) {
         this.initNeeded++;
 
-        this.observers[addr] = Observer.create(this, addr, function(newConn) {
+        var obsr = this.observers[addr] = Observer.create(this, addr, function(newConn) {
           self.observers[addr] = newConn;
+          var watcher = self.container.lookup('watcher:main');
+          watcher.newObserver(addr, newConn); 
           self.initDone();
         });
       }
@@ -144,6 +147,8 @@ var ConnectionManager = Ember.Object.extend({
 
   deregisterObserver: function(addr) {
     console.log("Removing ", addr, " from observers: ", this.observers);
+    var watcher = this.container.lookup('watcher:main');
+    watcher.deadObserver(addr); 
     delete this.observers[addr];
     console.log("Remaining observers: ", this.observers);
   },
@@ -151,20 +156,6 @@ var ConnectionManager = Ember.Object.extend({
   initDone: function() {
     if (++this.initCompleted === this.initNeeded) {
       window.App.advanceReadiness();
-    }
-  },
-
-  send: function(msg) {
-    var observers = this.observers;
-
-    if (flags.LOG_WEBSOCKETS) {
-      console.log('sending ', msg, 'to', observers);
-    }
-
-    for (var u in observers) {
-      if (observers.hasOwnProperty(u)) {
-        observers[u].push(msg);
-      }
     }
   }
 });

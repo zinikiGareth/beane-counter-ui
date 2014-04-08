@@ -1,4 +1,5 @@
 import demux from 'appkit/ziggrid/demux';
+import flags from 'appkit/flags';
 
 var container;
 
@@ -40,6 +41,15 @@ function Watcher(_namespace) {
 var gameDates = [];
 
 Watcher.prototype = {
+  observers: {},
+  watching: {},
+  newObserver: function(addr, obsr) {
+    this.observers[addr] = obsr;
+    // TODO: bring it up to date
+  },
+  deadObserver: function(addr) {
+    delete this.observers[addr];
+  },
   watchGameDate: function() {
     var handle = ++demux.lastId;
 
@@ -56,8 +66,8 @@ Watcher.prototype = {
 
     var stringified = JSON.stringify(query);
 
-    var connectionManager = container.lookup('connection_manager:main');
-    connectionManager.send(stringified);
+    this.sendToCurrentObservers(stringified);
+    this.watching[handle] = stringified;
 
     //this.sendFakeGameDates();
 
@@ -74,6 +84,15 @@ Watcher.prototype = {
     }
 
     Ember.run.later(this, 'sendFakeGameDates', 400);
+  },
+
+  watchProfile: function(player, season, callback) {
+    var opts = {
+      player: player,
+      season: season
+    };
+  
+    return this.watch('Profile', 'Profile', opts, callback);
   },
 
   watch: function(typeName, entryTypeName, opts, updateHandler) {
@@ -99,15 +118,27 @@ Watcher.prototype = {
     // TODO: Change this to forward to ZiggridObserver.
 
     // Send the JSON message to the server to begin observing.
-    var connectionManager = container.lookup('connection_manager:main');
-    connectionManager.send(stringified);
+    this.sendToCurrentObservers(stringified);
+    this.watching[handle] = stringified;
 
-    return model;
+    return {"model": model, "handle": handle};
   },
 
   unwatch: function(handle) {
-    var connectionManager = container.lookup('connection_manager:main');
-    connectionManager.send(JSON.stringify({ unwatch: handle }));
+    delete this.watching[handle];
+    this.sendToCurrentObservers(JSON.stringify({ unwatch: handle }));
+  },
+  
+  sendToCurrentObservers: function(msg) {
+    if (flags.LOG_WEBSOCKETS) {
+      console.log('sending ', msg, 'to', this.observers);
+    }
+
+    for (var u in this.observers) {
+      if (this.observers.hasOwnProperty(u)) {
+        this.observers[u].push(msg);
+      }
+    }
   }
 };
 

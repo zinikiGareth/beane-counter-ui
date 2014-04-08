@@ -33,14 +33,12 @@ var Table = Ember.Component.extend({
       watcher.unwatch(handle);
     }
 
-    var model = watcher.watch(this.get('type'),
+    var config = watcher.watch(this.get('type'),
                               this.get('entryType'),
                               { season: '' + this.get('season') });
 
-    this.set('content', model.get('table'));
-
-    // this is kinda hacky/brittle; this is updated in watcher.watch()
-    this.set('handle', demux.lastId);
+    this.set('content', config.model.get('table'));
+    this.set('handle', config.handle);
   }.observes('season').on('init')
 });
 

@@ -5,7 +5,7 @@ var PlayerProfile = Ember.Component.extend({
   seasonHolder: null,
   init: function () {
     var self = this;
-    this.connectionManager = this.container.lookup('connection_manager:main'); // inject
+    this.watcher = this.container.lookup('watcher:main'); // inject
     this.seasonHolder = this.container.lookup('controller:application');
     this.seasonHolder.addObserver('season', function() { self.playerWillChange(); self.playerChanged(); });
     this._super();
@@ -34,7 +34,12 @@ var PlayerProfile = Ember.Component.extend({
   playerChanged: function() {
     var newPlayer = this.get('player');
     if (newPlayer) {
-      this.watchProfile();
+      var self = this;
+      var watching = this.watcher.watchProfile(this.get('player.code'), this.seasonHolder.get('season'), function(data) {
+        self.set('profile', data);
+      });
+      this.set('watchHandle', watching.handle);
+      
     }
     this.set('imageFailedToLoad', false);
   }.observes('player').on('init'),
@@ -42,42 +47,14 @@ var PlayerProfile = Ember.Component.extend({
   watchHandle: null,
   profile: null,
 
-  watchProfile: function() {
-    var handle = ++demux.lastId;
-
-    this.set('watchHandle', handle);
-    this.set('profile', null);
-    var player = this;
-    demux[handle] = {
-      update: function(data) {
-        player.set('profile', data);
-      }
-    };
-
-    var query = {
-      watch: 'Profile',
-      unique: handle,
-      player: this.get('player.code'),
-      season: this.seasonHolder.get('season')
-    };
-
-    // Send the JSON message to the server to begin observing.
-    var stringified = JSON.stringify(query);
-    this.connectionManager.send(stringified);
-  },
-
   unwatchProfile: function() {
     var watchHandle = this.get('watchHandle');
 
     if (!watchHandle) {
       throw new Error('No handle to unwatch');
     }
-
-    this.connectionManager.send(JSON.stringify({
-      unwatch: watchHandle
-    }));
-
-    this.set('watchHandle', null); // clear handle
+    
+    this.watcher.unwatch(watchHandle);
   },
 
   // TODO: combine the various player car

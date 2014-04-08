@@ -27,7 +27,7 @@ var ApplicationRoute = Ember.Route.extend({
 
     var allStarPlayerCodes = this.container.lookupFactory('model:player').playerCodes();
 
-    var players = QuadrantPlayer.watchPlayers(allStarPlayerCodes, season);
+    var players = QuadrantPlayer.watchPlayers(this.container, allStarPlayerCodes, season);
     this.controllerFor('quadrant').set('players', players);
   },
 

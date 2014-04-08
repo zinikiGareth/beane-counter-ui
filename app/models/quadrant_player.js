@@ -64,9 +64,10 @@ QuadrantPlayer.reopenClass({
 
     return player;
   },
-  watchPlayers: function(playerNames, season, dayOfYear) {
+  watchPlayers: function(container, playerNames, season, dayOfYear) {
+    var watcher = container.lookup('watcher:main');
     playerNames.forEach(function(playerName, i) {
-      watchPlayer(playerName, season);
+      watchPlayer(watcher, playerName, season);
       QuadrantPlayer.findOrCreateByName(playerName);
     });
 
@@ -98,22 +99,8 @@ function normalizedQuadrantValue(value) {
   return value;
 }
 
-function watchPlayer(playerName, season) {
-  var handle = ++demux.lastId;
-  demux[handle] = {
-    update: updateQuadrantPlayer
-  };
-
-  var hash = {
-    watch: 'Profile',
-    unique: handle,
-    player: playerName,
-    season: season
-  };
-
-  // Send the JSON message to the server to begin observing.
-  var stringified = JSON.stringify(hash);
-  getConnectionManager().send(stringified);
+function watchPlayer(watcher, playerName, season) {
+  watcher.watchProfile(playerName, season, updateQuadrantPlayer);
 }
 
 // TODO: inject
