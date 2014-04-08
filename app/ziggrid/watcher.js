@@ -45,7 +45,11 @@ Watcher.prototype = {
   watching: {},
   newObserver: function(addr, obsr) {
     this.observers[addr] = obsr;
-    // TODO: bring it up to date
+    for (var u in this.watching) {
+      if (this.watching.hasOwnProperty(u)) {
+        obsr.push(this.watching[u]);
+      }
+    }
   },
   deadObserver: function(addr) {
     delete this.observers[addr];
