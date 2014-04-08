@@ -988,9 +988,11 @@ jQuery.atmosphere = function() {
                     jQuery.atmosphere.debug("Using URL: " + location);
                 }
 
+                /* This doesn't seem true to me .... we haven't reconnected yet.
                 if (webSocketOpened) {
                     _open('re-opening', "websocket", _request);
                 }
+                */
 
                 if (!_request.reconnect) {
                     if (_websocket != null) {
@@ -1026,6 +1028,8 @@ jQuery.atmosphere = function() {
 
                     if (!webSocketOpened) {
                         _open('opening', "websocket", _request);
+                    } else {
+                        _open('re-opening', "websocket", _request);
                     }
 
                     webSocketOpened = true;
@@ -1108,10 +1112,12 @@ jQuery.atmosphere = function() {
                         _reconnectWithFallbackTransport("Websocket failed. Downgrading to Comet and resending");
 
                     } else if (_request.reconnect && _response.transport == 'websocket') {
-                        if (_request.reconnect && _requestCount++ < _request.maxRequest) {
+                        if (_request.reconnect) {
                             _request.requestCount = _requestCount;
                             _response.responseBody = "";
-                            _executeWebSocket(true);
+                            jQuery.atmosphere.warn("Failed to connect, attempt #" + _requestCount);
+                            _requestCount++;
+                            setTimeout(function() { _executeWebSocket(true); }, 2500);
                         } else {
                             jQuery.atmosphere.log(_request.logLevel, ["Websocket reconnect maximum try reached " + _request.requestCount]);
                             jQuery.atmosphere.warn("Websocket error, reason: " + message.reason);

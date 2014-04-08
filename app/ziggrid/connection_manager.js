@@ -39,6 +39,10 @@ var ConnectionManager = Ember.Object.extend({
           responseBody: msg.responseBody
         });
         Ember.run.throttle(self, 'flushMessages', messages, 150);
+      },
+      
+      onReconnect: function(request, response) {
+        conn.push(JSON.stringify({ action: 'init' }));
       }
     });
   }.on('init'),
@@ -71,6 +75,7 @@ var ConnectionManager = Ember.Object.extend({
         if (flags.LOG_WEBSOCKETS) {
           console.log('Have new ' + server + ' server at ' + endpoint);
         }
+          console.log('Have new ' + server + ' server at ' + endpoint);
         this.registerServer(server, addr);
 
       } else if (body['status']) {
@@ -115,18 +120,32 @@ var ConnectionManager = Ember.Object.extend({
   registerServer: function(server, addr) {
     var self = this;
     if (server === 'generator') {
-      this.generators[addr] = Generator.create(addr);
+      if (!this.generators[addr]) {
+        this.generators[addr] = Generator.create(this, addr);
+      }
     } else if (server === 'ziggrid') {
       //return;
       if (!this.observers[addr]) {
         this.initNeeded++;
 
-        this.observers[addr] = Observer.create(addr, function(newConn) {
+        this.observers[addr] = Observer.create(this, addr, function(newConn) {
           self.observers[addr] = newConn;
           self.initDone();
         });
       }
     }
+  },
+  
+  deregisterGenerator: function(addr) {
+    console.log("Removing ", addr, " from generators: ", this.generators);
+    delete this.generators[addr];
+    console.log("Remaining generators: ", this.generators);
+  },
+
+  deregisterObserver: function(addr) {
+    console.log("Removing ", addr, " from observers: ", this.observers);
+    delete this.observers[addr];
+    console.log("Remaining observers: ", this.observers);
   },
 
   initDone: function() {

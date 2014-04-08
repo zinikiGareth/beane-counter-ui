@@ -1,15 +1,15 @@
 import demux from 'appkit/ziggrid/demux';
 import flags from 'appkit/flags';
 
-function Observer(url, callback) {
+function Observer(mgr, addr, callback) {
 
-  url = url + 'updates';
+  var url = addr + 'updates';
 
   if (flags.LOG_WEBSOCKETS) {
     console.log('Observer connecting at ' + url);
   }
 
-  var conn = jQuery.atmosphere.subscribe({
+  var open = {
     url: url,
 
     transport: 'websocket',
@@ -21,7 +21,6 @@ function Observer(url, callback) {
 
     onMessage: function(msg) {
       if (msg.status === 200) {
-        // TODO: why are we still getting deliveryFor messages in connectionManager?
         if (flags.LOG_WEBSOCKETS) {
           console.log('Received message ' + msg.responseBody);
         }
@@ -29,22 +28,31 @@ function Observer(url, callback) {
         if (body['deliveryFor']) {
           var h = demux[body['deliveryFor']];
           if (h && h.update)
-//            h.update(body['table']);
             h.update(body['payload']);
         } else if (body['error']) {
           console.error("Server Error: ", body['error']);
         } else {
-          console.error('unknown message type');
+          console.error('unknown message type', body);
         }
       } else {
         console.error('HTTP error');
       }
+    },
+    
+    onClose: function() {
+      if (conn != null) {
+        mgr.deregisterObserver(addr);
+        var myConn = conn;
+        conn = null;
+        myConn.close();
+      }
     }
-  });
+  };
+  var conn = this.conn = jQuery.atmosphere.subscribe(open);
 }
 
-Observer.create = function(url, callback) {
-  return new Observer(url, callback);
+Observer.create = function(mgr, url, callback) {
+  return new Observer(mgr, url, callback);
 };
 
 export default Observer;

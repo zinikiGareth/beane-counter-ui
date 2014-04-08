@@ -1,8 +1,8 @@
 import flags from 'appkit/flags';
 
-function Generator(url, callback) {
+function Generator(mgr, addr) {
   var open = {
-    url: url + 'generator',
+    url: addr + 'generator',
     transport: 'websocket',
     fallbackTransport: 'long-polling',
 
@@ -21,6 +21,15 @@ function Generator(url, callback) {
         var body = JSON.parse(msg.responseBody);
       } else {
         console.log('Generator HTTP Error:', msg.status);
+      }
+    },
+     
+    onClose: function() {
+      if (conn != null) {
+        mgr.deregisterGenerator(addr);
+        var myConn = conn;
+        conn = null;
+        myConn.close();
       }
     }
   };
@@ -59,8 +68,8 @@ Generator.prototype = {
   }
 };
 
-Generator.create = function(url, callback) {
-  return new Generator(url, callback);
+Generator.create = function(mgr, url) {
+  return new Generator(mgr, url);
 };
 
 export default Generator;
