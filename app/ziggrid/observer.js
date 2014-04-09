@@ -3,7 +3,7 @@ import flags from 'appkit/flags';
 
 function Observer(mgr, addr, callback) {
 
-  var url = addr + 'updates';
+  var url = addr + 'observer';
 
   if (flags.LOG_WEBSOCKETS) {
     console.log('Observer connecting at ' + url);
@@ -16,6 +16,9 @@ function Observer(mgr, addr, callback) {
     fallbackTransport: 'long-polling',
 
     onOpen: function(response) {
+      if (flags.LOG_WEBSOCKETS) {
+        console.log('opened observer connection with response', response);
+      }
       callback(conn);
     },
 

@@ -17,19 +17,18 @@ var ConnectionManager = Ember.Object.extend({
 
     this.generators = {};
     this.observers = {};
-    this.initNeeded = 1;
-    this.initCompleted = 0;
 
     var messages = [];
 
     var conn = this.conn = jQuery.atmosphere.subscribe({
-      url: this.url + 'updates',
+      url: this.url + 'connmgr',
       transport: 'websocket',
       fallbackTransport: 'long-polling',
 
       // handle the 'open' message
       onOpen: function(response) {
-        conn.push(JSON.stringify({ action: 'init' }));
+        conn.push(JSON.stringify({ action: 'models' }));
+        conn.push(JSON.stringify({ action: 'servers' }));
       },
 
       // and then handle each incoming message
@@ -43,7 +42,8 @@ var ConnectionManager = Ember.Object.extend({
       },
       
       onReconnect: function(request, response) {
-        conn.push(JSON.stringify({ action: 'init' }));
+        conn.push(JSON.stringify({ action: 'models' }));
+        conn.push(JSON.stringify({ action: 'servers' }));
       }
     });
   }.on('init'),
@@ -81,8 +81,8 @@ var ConnectionManager = Ember.Object.extend({
 
       } else if (body['status']) {
         var stat = body['status'];
-        if (stat === 'initdone') {
-          this.initDone();
+        if (stat === 'modelsSent') {
+          this.modelsRead();
         } else {
           console.log('Do not recognize ' + stat);
         }
@@ -122,18 +122,21 @@ var ConnectionManager = Ember.Object.extend({
     var self = this;
     if (server === 'generator') {
       if (!this.generators[addr]) {
-        this.generators[addr] = Generator.create(this, addr);
+        this.generators[addr] = Generator.create(this, addr, function(gen, newConn) {
+          var player = self.container.lookup('bean-player:main');
+          if (player.get('isPlaying')) {
+            gen.start();
+          } else {
+            gen.stop();
+          }
+        });
       }
     } else if (server === 'ziggrid') {
-      //return;
       if (!this.observers[addr]) {
-        this.initNeeded++;
-
         var obsr = this.observers[addr] = Observer.create(this, addr, function(newConn) {
           self.observers[addr] = newConn;
           var watcher = self.container.lookup('watcher:main');
           watcher.newObserver(addr, newConn); 
-          self.initDone();
         });
       }
     }
@@ -153,10 +156,8 @@ var ConnectionManager = Ember.Object.extend({
     console.log("Remaining observers: ", this.observers);
   },
 
-  initDone: function() {
-    if (++this.initCompleted === this.initNeeded) {
-      window.App.advanceReadiness();
-    }
+  modelsRead: function() {
+    window.App.advanceReadiness();
   }
 });
 

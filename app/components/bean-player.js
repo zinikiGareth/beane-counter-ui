@@ -5,6 +5,11 @@ var Player = Ember.Component.extend({
   showNub: true,
   _nubProgress: 0,
   nubProgressIsSynced: true,
+  
+  init: function() {
+    this._super();
+    this.container.register('bean-player:main', this, { instantiate: false });
+  },
 
   generators: Ember.computed.alias('connectionManager.generators'),
 

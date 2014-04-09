@@ -1,6 +1,7 @@
 import flags from 'appkit/flags';
 
-function Generator(mgr, addr) {
+function Generator(mgr, addr, callback) {
+  var self = this;
   var open = {
     url: addr + 'generator',
     transport: 'websocket',
@@ -10,6 +11,7 @@ function Generator(mgr, addr) {
       if (flags.LOG_WEBSOCKETS) {
         console.log('opened generator connection with response', response);
       }
+      callback(self, conn);
     },
 
     // and then handle each incoming message
@@ -68,8 +70,8 @@ Generator.prototype = {
   }
 };
 
-Generator.create = function(mgr, url) {
-  return new Generator(mgr, url);
+Generator.create = function(mgr, url, callback) {
+  return new Generator(mgr, url, callback);
 };
 
 export default Generator;

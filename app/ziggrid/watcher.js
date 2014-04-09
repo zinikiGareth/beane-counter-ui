@@ -129,6 +129,7 @@ Watcher.prototype = {
   },
 
   unwatch: function(handle) {
+    console.log("unwatching " + handle);
     delete this.watching[handle];
     this.sendToCurrentObservers(JSON.stringify({ unwatch: handle }));
   },
