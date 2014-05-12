@@ -1,4 +1,3 @@
-import demux from 'appkit/ziggrid/demux';
 import flags from 'appkit/flags';
 
 var container;
@@ -33,45 +32,49 @@ function Loader(type, entryType, id) {
   }
 }
 
+function subscribe(observer, hash) {
+  var req = observer.subscribe("watch/"+hash.watch, hash.callback);
+  if (hash.opts) {
+    for (var opt in hash.opts) {
+      if (hash.opts.hasOwnProperty(opt))
+        req.setOption(opt, hash.opts[opt]);
+    }
+  }
+  req.send();
+  if (!hash.subscriptions)
+    hash.subscriptions = [];
+  hash.subscriptions.push(req);
+}
+ 
 function Watcher(_namespace) {
   this.namespace = _namespace;
   container = this.container = _namespace.__container__;
 }
 
 var gameDates = [];
+var randomId = 1;
 
 Watcher.prototype = {
   observers: {},
-  watching: {},
+  watching: [],
   newObserver: function(addr, obsr) {
     this.observers[addr] = obsr;
-    for (var u in this.watching) {
-      if (this.watching.hasOwnProperty(u)) {
-        obsr.push(this.watching[u]);
-      }
+    for (var u=0;u<this.watching.length;u++) {
+      var hash = this.watching[u];
+      subscribe(obsr, hash);
     }
   },
   deadObserver: function(addr) {
     delete this.observers[addr];
   },
   watchGameDate: function() {
-    var handle = ++demux.lastId;
-
-    demux[handle] = {
-      update: function(a) {
-        gameDates.pushObject(a);
-      }
-    };
-
     var query = {
       watch: 'GameDate',
-      unique: handle
+      callback: function(o) { gameDates.pushObject(o); }
     };
 
-    var stringified = JSON.stringify(query);
-
-    this.sendToCurrentObservers(stringified);
-    this.watching[handle] = stringified;
+    this.sendToCurrentObservers(query);
+    this.watching.push(query);
 
     //this.sendFakeGameDates();
 
@@ -93,7 +96,7 @@ Watcher.prototype = {
   watchProfile: function(player, season, callback) {
     var opts = {
       player: player,
-      season: season
+      season: "" + season
     };
   
     return this.watch('Profile', 'Profile', opts, callback);
@@ -101,47 +104,44 @@ Watcher.prototype = {
 
   watch: function(typeName, entryTypeName, opts, updateHandler) {
     var type = this.namespace[typeName]; // ED limitation
-    var handle = ++demux.lastId;
+    var entryType = this.namespace[entryTypeName];
     var store = container.lookup('store:main');
 
+// The use of "handle" here is left over from before
+// I think we should want this passed in, possibly with the whole model
+    var handle = ++randomId;
     store.load(type, handle, {});
-
     var model = store.find(type, handle);
-    var hash = $.extend({
+
+    var hash = {
       watch: typeName,
-      unique: handle
-    }, opts);
-
-    var entryType = this.namespace[entryTypeName];
-
-    demux[handle] = updateHandler ? { update: updateHandler } :
-                    new Loader(type, entryType, model.get('id'), opts);
-
-    var stringified = JSON.stringify(hash);
-
-    // TODO: Change this to forward to ZiggridObserver.
+      opts: opts,
+      callback: updateHandler ? updateHandler :
+                new Loader(type, entryType, model.get('id'), opts).update
+    };
 
     // Send the JSON message to the server to begin observing.
-    this.sendToCurrentObservers(stringified);
-    this.watching[handle] = stringified;
+    this.sendToCurrentObservers(hash);
+    this.watching.push(hash);
 
-    return {"model": model, "handle": handle};
+    return {"model": model, "handle": handle, "hash": hash};
   },
 
-  unwatch: function(handle) {
-    console.log("unwatching " + handle);
-    delete this.watching[handle];
-    this.sendToCurrentObservers(JSON.stringify({ unwatch: handle }));
+  unwatch: function(hash) {
+    for (var i=0;i<hash.subscriptions.length;i++)
+      hash.subscriptions[i].unsubscribe();
+    var idx = this.watching.indexOf(hash);
+    this.watching.splice(idx, 1); 
   },
   
-  sendToCurrentObservers: function(msg) {
+  sendToCurrentObservers: function(hash) {
     if (flags.LOG_WEBSOCKETS) {
-      console.log('sending ', msg, 'to', this.observers);
+      console.log('watching', hash.watch, 'from', this.observers);
     }
 
     for (var u in this.observers) {
       if (this.observers.hasOwnProperty(u)) {
-        this.observers[u].push(msg);
+        subscribe(this.observers[u], hash);
       }
     }
   }

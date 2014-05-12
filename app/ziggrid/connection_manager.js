@@ -1,8 +1,8 @@
 import Generator from 'appkit/ziggrid/generator';
 import Observer from 'appkit/ziggrid/observer';
-import demux from 'appkit/ziggrid/demux';
 import watcher from 'appkit/ziggrid/watcher';
 import flags from 'appkit/flags';
+import zinc from 'zinc';
 
 var ConnectionManager = Ember.Object.extend({
   url: null,
@@ -10,6 +10,8 @@ var ConnectionManager = Ember.Object.extend({
   // Reference to the global app namespace where we'll be installing
   // dynamically generated DS.Model classes
   namespace: null,
+  
+  requestor: null,
 
   establishConnection: function() {
 
@@ -18,8 +20,21 @@ var ConnectionManager = Ember.Object.extend({
     this.generators = {};
     this.observers = {};
 
-    var messages = [];
+    var models = [];
+    var servers = [];
+    zinc.newRequestor("/ziggrid").then(function(req) {
+      self.requestor = req;
+      req.subscribe("models", function(msg) {
+        models.push(msg);
+        Ember.run.throttle(self, 'flushModels', models, 150);  
+      }).send();
+      req.subscribe("servers", function(msg) {
+        servers.push(msg);
+        Ember.run.throttle(self, 'flushServers', servers, 150);  
+      }).send();
+    });
 
+/*
     var conn = this.conn = jQuery.atmosphere.subscribe({
       url: this.url + 'connmgr',
       transport: 'websocket',
@@ -46,15 +61,38 @@ var ConnectionManager = Ember.Object.extend({
         conn.push(JSON.stringify({ action: 'servers' }));
       }
     });
+    */
   }.on('init'),
 
-  flushMessages: function(messages) {
+  flushModels: function(messages) {
     while (messages.length) {
-      var message = messages.shift();
-      this.handleMessage(message);
+      var body = messages.shift();
+      if (body['status']) {
+        if (body['status'] === 'modelsSent') {
+          this.modelsRead();
+        } else {
+          console.log('Do not recognize ' + body['status']);
+        }
+      } else
+        this.registerModel(body.modelName, body.model);
     }
   },
 
+  flushServers: function(messages) {
+    while (messages.length) {
+      var body = messages.shift();
+      var endpoint = body.endpoint,
+      addr = 'http://' + endpoint + '/ziggrid/',
+      server = body.server;
+
+      if (flags.LOG_WEBSOCKETS) {
+        console.log('Have new ' + server + ' server at ' + endpoint);
+      }
+      this.registerServer(server, addr);
+    }
+  },
+
+/*
   handleMessage: function(msg) {
     if (msg.status === 200) {
 
@@ -94,6 +132,7 @@ var ConnectionManager = Ember.Object.extend({
       //callback.error('HTTP Error: ' + msg.status);
     }
   },
+*/
 
   registerModel: function(name, model) {
     var attrs = {};
@@ -120,6 +159,7 @@ var ConnectionManager = Ember.Object.extend({
 
   registerServer: function(server, addr) {
     var self = this;
+    console.log(server + " " + addr);
     if (server === 'generator') {
       if (!this.generators[addr]) {
         this.generators[addr] = Generator.create(this, addr, function(gen, newConn) {

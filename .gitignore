@@ -12,15 +12,6 @@
 /connect.lock
 /libpeerconnection.log
 
-/vendor/*
-
-!/vendor/ember-data.js
-!/vendor/jquery.atmosphere.js
-!/vendor/loader.js
-!/vendor/d3.js
-!/vendor/ember/index.js
-!/vendor/moment.js
-
 .DS_Store
 
 chef-test.pem

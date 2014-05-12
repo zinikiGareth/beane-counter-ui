@@ -1,5 +1,3 @@
-import demux from 'appkit/ziggrid/demux';
-
 var Table = Ember.Component.extend({
 
   // e.g. 'Leaderboard_production_groupedBy_season'
@@ -38,7 +36,7 @@ var Table = Ember.Component.extend({
                               { season: '' + this.get('season') });
 
     this.set('content', config.model.get('table'));
-    this.set('handle', config.handle);
+    this.set('handle', config.hash);
   }.observes('season').on('init')
 });
 

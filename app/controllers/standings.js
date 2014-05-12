@@ -1,4 +1,3 @@
-import demux from 'appkit/ziggrid/demux';
 import groupBy from 'appkit/utils/group_by';
 
 function Region(name, teams) {

@@ -1,6 +1,5 @@
 import Resolver from 'resolver';
 import Store from 'appkit/store';
-import demux from 'appkit/ziggrid/demux';
 import Player from 'appkit/models/player';
 import watcherInitializer from 'appkit/initializers/watcher';
 import csvInitializer from 'appkit/initializers/csv';

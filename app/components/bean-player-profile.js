@@ -1,5 +1,3 @@
-import demux from 'appkit/ziggrid/demux';
-
 var PlayerProfile = Ember.Component.extend({
   player: null,
   seasonHolder: null,
@@ -38,7 +36,7 @@ var PlayerProfile = Ember.Component.extend({
       var watching = this.watcher.watchProfile(this.get('player.code'), this.seasonHolder.get('season'), function(data) {
         self.set('profile', data);
       });
-      this.set('watchHandle', watching.handle);
+      this.set('watchHandle', watching.hash);
       
     }
     this.set('imageFailedToLoad', false);

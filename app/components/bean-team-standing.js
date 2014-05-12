@@ -1,5 +1,3 @@
-import demux from 'appkit/ziggrid/demux';
-
 var TeamStanding = Ember.Component.extend({
   _applicationController: Ember.computed(function(){
     return this.container.lookup('controller:application');
@@ -32,7 +30,7 @@ var TeamStanding = Ember.Component.extend({
 //    console.log('watching', subscription);
 
     var track = watcher.watch('WinLoss', 'WinLoss', subscription);
-    this.set('handle', track.handle);
+    this.set('handle', track.hash);
 
     return track.model;
   }.property('team.code', 'season'),

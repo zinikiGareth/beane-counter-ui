@@ -1,46 +1,14 @@
 import flags from 'appkit/flags';
+import zinc from 'zinc';
 
 function Generator(mgr, addr, callback) {
   var self = this;
-  var open = {
-    url: addr + 'generator',
-    transport: 'websocket',
-    fallbackTransport: 'long-polling',
-
-    onOpen: function(response) {
-      if (flags.LOG_WEBSOCKETS) {
-        console.log('opened generator connection with response', response);
-      }
-      callback(self, conn);
-    },
-
-    // and then handle each incoming message
-    onMessage: function(msg) {
-      if (msg.status === 200) {
-        if (flags.LOG_WEBSOCKETS) {
-          console.log(msg.responseBody);
-        }
-        var body = JSON.parse(msg.responseBody);
-      } else {
-        console.log('Generator HTTP Error:', msg.status);
-      }
-    },
-     
-    onClose: function() {
-      if (conn != null) {
-        mgr.deregisterGenerator(addr);
-        var myConn = conn;
-        conn = null;
-        myConn.close();
-      }
-    }
-  };
-
-  var conn = this.conn = jQuery.atmosphere.subscribe(open);
+  zinc.newRequestor(addr).then(function(req) {
+    self.requestor = req;
+  });
 }
 
 Generator.prototype = {
-
   hasSetDelay: false,
 
   send: function(msg) {
@@ -58,15 +26,15 @@ Generator.prototype = {
       this.hasSetDelay = true;
     }
 
-    this.send(JSON.stringify({'action':'start'}));
+    this.requestor.invoke("generator/start").send();
   },
 
   stop: function() {
-    this.send(JSON.stringify({'action':'stop'}));
+    this.requestor.invoke("generator/stop").send();
   },
 
   setDelay: function(ms) {
-    this.send(JSON.stringify({'action':'delay','size':ms}));
+    this.requestor.invoke("generator/setDelay").setOption("delay", ms).send();
   }
 };
 
