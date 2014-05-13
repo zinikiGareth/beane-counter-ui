@@ -20,67 +20,30 @@ var ConnectionManager = Ember.Object.extend({
     this.generators = {};
     this.observers = {};
 
-    var models = [];
     var servers = [];
     zinc.newRequestor("/ziggrid").then(function(req) {
       self.requestor = req;
       req.subscribe("models", function(msg) {
-        models.push(msg);
-        Ember.run.throttle(self, 'flushModels', models, 150);  
+        self.processModels(msg.models);
       }).send();
       req.subscribe("servers", function(msg) {
         servers.push(msg);
         Ember.run.throttle(self, 'flushServers', servers, 150);  
       }).send();
     });
-
-/*
-    var conn = this.conn = jQuery.atmosphere.subscribe({
-      url: this.url + 'connmgr',
-      transport: 'websocket',
-      fallbackTransport: 'long-polling',
-
-      // handle the 'open' message
-      onOpen: function(response) {
-        conn.push(JSON.stringify({ action: 'models' }));
-        conn.push(JSON.stringify({ action: 'servers' }));
-      },
-
-      // and then handle each incoming message
-      onMessage: function(msg) {
-        // Have to clone because jQuery atmosphere reuses response objects.
-        messages.push({
-          status: msg.status,
-          responseBody: msg.responseBody
-        });
-        Ember.run.throttle(self, 'flushMessages', messages, 150);
-      },
-      
-      onReconnect: function(request, response) {
-        conn.push(JSON.stringify({ action: 'models' }));
-        conn.push(JSON.stringify({ action: 'servers' }));
-      }
-    });
-    */
   }.on('init'),
 
-  flushModels: function(messages) {
-    while (messages.length) {
-      var body = messages.shift();
-      if (body['status']) {
-        if (body['status'] === 'modelsSent') {
-          this.modelsRead();
-        } else {
-          console.log('Do not recognize ' + body['status']);
-        }
-      } else
-        this.registerModel(body.modelName, body.model);
+  processModels: function(models) {
+    while (models.length) {
+      var body = models.shift();
+      this.registerModel(body.modelName, body.model);
     }
+    this.modelsRead();
   },
 
   flushServers: function(messages) {
     while (messages.length) {
-      var body = messages.shift();
+      var body = messages.shift().servers[0];
       var endpoint = body.endpoint,
       addr = 'http://' + endpoint + '/ziggrid/',
       server = body.server;

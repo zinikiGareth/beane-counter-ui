@@ -8,27 +8,39 @@ function Loader(type, entryType, id) {
   this.update = type === entryType ? updateIndividualThing : updateTabularData;
 
   function updateTabularData(body) {
-    var table = body['table'];
-    var rows = [];
+    for (var p in body) {
+      if (body.hasOwnProperty(p) && typeof(body[p]) === 'object') {
+        body = body[p][0];
+        var table = body['table'];
+        var rows = [];
 
-    for (var i = 0; i < table.length; i++) {
-      var item = table[i];
+        for (var i = 0; i < table.length; i++) {
+          var item = table[i];
 
-      var attrs = {};
-      attrs[Ember.keys(entryType.model)[0]] = item[0];
+          var attrs = {};
+          attrs[Ember.keys(entryType.model)[0]] = item[0];
 
-      store.load(entryType, item[1], attrs);
-      rows.push(item[1]);
+          store.load(entryType, item[1], attrs);
+          rows.push(item[1]);
+        }
+
+        store.load(type, id, {
+          table: rows
+        });
+        return;
+      }
     }
-
-    store.load(type, id, {
-      table: rows
-    });
   }
 
   function updateIndividualThing(body) {
-    body.handle_id = id;
-    store.load(type, id, body);
+    for (var p in body) {
+      if (body.hasOwnProperty(p) && typeof(body[p]) === 'object') {
+        body = body[p][0];
+        body.handle_id = id;
+        store.load(type, id, body);
+        return;
+      }
+    }
   }
 }
 
@@ -70,7 +82,7 @@ Watcher.prototype = {
   watchGameDate: function() {
     var query = {
       watch: 'GameDate',
-      callback: function(o) { gameDates.pushObject(o); }
+      callback: function(o) { gameDates.pushObject(o.gameDates[0]); }
     };
 
     this.sendToCurrentObservers(query);
@@ -99,7 +111,7 @@ Watcher.prototype = {
       season: "" + season
     };
   
-    return this.watch('Profile', 'Profile', opts, callback);
+    return this.watch('Profile', 'Profile', opts, function(ja) { callback(ja['profiles'][0]); });
   },
 
   watch: function(typeName, entryTypeName, opts, updateHandler) {
